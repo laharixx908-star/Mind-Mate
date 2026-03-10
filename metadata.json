@@ -1,0 +1,7 @@
+{
+  "name": "MindMate — AI Mental Wellness",
+  "description": "An AI-powered mental wellness platform featuring an empathetic chat companion, mood tracking, and relaxation tools.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

@@ -1,0 +1,144 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - displayName: string (required, size < 100)
+    //   - bio: string (optional, size < 500)
+    //   - wellnessGoal: string (optional, size < 100)
+    //   - xp: number (required, positive)
+    //   - streak: number (required, positive)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: users/{uid}/moods
+    // Fields:
+    //   - uid: string (required)
+    //   - emoji: string (required, size < 10)
+    //   - label: string (required, size < 50)
+    //   - timestamp: timestamp (required)
+    //
+    // Collection: users/{uid}/plants
+    // Fields:
+    //   - uid: string (required)
+    //   - type: string (required, size < 50)
+    //   - emoji: string (required, size < 10)
+    //   - label: string (required, size < 50)
+    //   - height: number (required, positive)
+    //   - timestamp: timestamp (required)
+    //
+    // Collection: users/{uid}/chats
+    // Fields:
+    //   - uid: string (required)
+    //   - sessionId: string (required)
+    //   - role: string (required, in ['user', 'ai'])
+    //   - text: string (required, size < 5000)
+    //   - timestamp: timestamp (required)
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "sailahari404@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'xp', 'streak', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() < 100 &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() < 500)) &&
+             data.xp is number && data.xp >= 0 &&
+             data.streak is number && data.streak >= 0;
+    }
+
+    function isValidMood(data) {
+      return data.keys().hasAll(['uid', 'emoji', 'label', 'timestamp']) &&
+             data.uid == request.auth.uid &&
+             data.emoji is string && data.emoji.size() < 10 &&
+             data.label is string && data.label.size() < 50;
+    }
+
+    function isValidPlant(data) {
+      return data.keys().hasAll(['uid', 'type', 'emoji', 'label', 'height', 'timestamp']) &&
+             data.uid == request.auth.uid &&
+             data.type is string && data.type.size() < 50 &&
+             data.emoji is string && data.emoji.size() < 10 &&
+             data.label is string && data.label.size() < 50 &&
+             data.height is number && data.height >= 0;
+    }
+
+    function isValidChat(data) {
+      return data.keys().hasAll(['uid', 'sessionId', 'role', 'text', 'timestamp']) &&
+             data.uid == request.auth.uid &&
+             data.role in ['user', 'ai'] &&
+             data.text is string && data.text.size() < 5000;
+    }
+
+    function isValidCommunityPost(data) {
+      return data.keys().hasAll(['uid', 'authorName', 'text', 'emoji', 'likes', 'timestamp']) &&
+             data.uid == request.auth.uid &&
+             data.authorName is string && data.authorName.size() < 100 &&
+             data.text is string && data.text.size() < 500 &&
+             data.emoji is string && data.emoji.size() < 10 &&
+             data.likes is number && data.likes >= 0;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) && isValidUser(request.resource.data);
+      allow update: if isOwner(uid) && isValidUser(request.resource.data) && 
+                      request.resource.data.createdAt == resource.data.createdAt;
+      
+      match /moods/{moodId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create: if isOwner(uid) && isValidMood(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      match /plants/{plantId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create: if isOwner(uid) && isValidPlant(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      match /chats/{messageId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create: if isOwner(uid) && isValidChat(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+    }
+
+    match /community/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidCommunityPost(request.resource.data);
+      allow update: if isAuthenticated() && 
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']) &&
+                      math.abs(request.resource.data.likes - resource.data.likes) == 1;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user preferences and statistics.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "bio": { "type": "string" },
+        "wellnessGoal": { "type": "string" },
+        "xp": { "type": "number" },
+        "streak": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName"]
+    },
+    "MoodEntry": {
+      "title": "Mood Entry",
+      "description": "A single mood log entry.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "emoji": { "type": "string" },
+        "label": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "emoji", "label", "timestamp"]
+    },
+    "GardenPlant": {
+      "title": "Garden Plant",
+      "description": "A plant grown in the user's garden.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "type": { "type": "string" },
+        "emoji": { "type": "string" },
+        "label": { "type": "string" },
+        "height": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "type", "emoji", "label", "timestamp"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "A single message in a chat session.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "ai"] },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "sessionId", "role", "text", "timestamp"]
+    },
+    "CommunityPost": {
+      "title": "Community Post",
+      "description": "A public mindful moment shared by a user.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "authorName": { "type": "string" },
+        "text": { "type": "string" },
+        "emoji": { "type": "string" },
+        "likes": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "authorName", "text", "emoji", "likes", "timestamp"]
+    }
+  },
+  "firestore": {
+    "users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profile data."
+    },
+    "users/{uid}/moods/{moodId}": {
+      "schema": "MoodEntry",
+      "description": "User's mood history."
+    },
+    "users/{uid}/plants/{plantId}": {
+      "schema": "GardenPlant",
+      "description": "User's garden plants."
+    },
+    "users/{uid}/chats/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "User's chat history."
+    },
+    "community/{postId}": {
+      "schema": "CommunityPost",
+      "description": "Public community posts."
+    }
+  }
+}
